@@ -1,0 +1,56 @@
+Download the android ndk (r6)
+
+Read docs/STANDALONE-TOOLCHAIN.html "3/ Invoking the compiler (the easy way):"
+
+Make a standalone toolchain and add it to your PATH
+
+Run build.sh
+XXX: the instructions for building Cogl should be hacked, and instead of using
+the 1.7.6 snapshot Cogl should be cloned from git and checkout commit
+4ea7caf3366f9 and apply cogl-4ea7caf3366f99.patch
+
+cd examples/android/hello
+
+export PATH=/home/bob/src/android/android-ndk-r7:$PATH
+export NDK_MODULE_PATH=/home/bob/var/platforms/android/packages
+
+NDK_DEBUG=1 ndk-build
+
+Download the latest SDK
+
+export PATH=/home/bob/src/android/android-sdk-linux_86/tools/:/home/bob/src/android/android-sdk-linux_86/platform-tools:$PATH
+
+cd examples/android/hello
+
+List sdk targets using
+android list
+
+Then run
+android update project -p . -t <TARGET_ID>
+
+
+Then build an apk using:
+ant debug
+
+Copy the apk to 
+
+Connect to a device via a usb cable
+
+Install the api:
+$ adb install bin/TestCoglHello-debug.apk
+
+Get a shell on the device and run the test:
+adb shell am start -a android.intent.action.MAIN -n com.cogl.example.zzz.Hello/android.app.NativeActivity
+
+ndk-gdb
+NB: you need to switch thread once connected via gdb
+
+ndk-build && rm -fr bin && ant debug && adb install -i bin/TestCoglHello-debug.apk
+
+XXX: I was previously trying the following before getting ndk-gdb to work...
+adb forward tcp:12345 tcp:12345
+$ adb shell run-as com.cogl.example.zzz.Hello /data/local/gdbserver :12345 --attach `adb shell ps | grep com.cogl.example.zzz.Hello | awk '{print $2}'`
+
+XXX: As a reminder I needed to hack the package name in AndroidManifest.xml to
+get a favourable listing in /data/system/packages.list in the first 8k of the
+file to workaround a bug in the run-as command.
