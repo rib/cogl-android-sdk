@@ -1,0 +1,28 @@
+From f9dce227f35f561405db23b6c481011a8e43fc01 Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@linux.intel.com>
+Date: Tue, 30 Aug 2011 00:26:16 +0100
+Subject: [PATCH 7/7] pass all 5 args to prctl
+
+Even though the PR_SET_PDEATHSIG option for prctl only implies
+significance for one additional argument we still need to pass dummy
+values for the remaining 3 arguments.
+---
+ gio/libasyncns/asyncns.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/gio/libasyncns/asyncns.c b/gio/libasyncns/asyncns.c
+index 155f491..157478a 100644
+--- a/gio/libasyncns/asyncns.c
++++ b/gio/libasyncns/asyncns.c
+@@ -690,7 +690,7 @@ static int process_worker(int in_fd, int out_fd) {
+         goto fail;
+ 
+ #ifdef PR_SET_PDEATHSIG
+-    if (prctl(PR_SET_PDEATHSIG, SIGTERM) >= 0)
++    if (prctl(PR_SET_PDEATHSIG, SIGTERM, 0, 0, 0) >= 0)
+         have_death_sig = 1;
+ #endif
+ 
+-- 
+1.7.6
+

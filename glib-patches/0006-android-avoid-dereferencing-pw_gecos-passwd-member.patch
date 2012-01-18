@@ -1,0 +1,55 @@
+From 737239f5b896993a59d9474b8968c54af087aa68 Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@linux.intel.com>
+Date: Mon, 22 Aug 2011 02:22:31 +0100
+Subject: [PATCH 6/7] android: avoid dereferencing pw_gecos passwd member
+
+Android's passwd struct doesn't include the pw_gecos member so we skip
+trying to fetch the user's real name on android.
+---
+ gio/glocalfileinfo.c |    2 ++
+ glib/gutils.c        |    2 ++
+ 2 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/gio/glocalfileinfo.c b/gio/glocalfileinfo.c
+index 30ea97b..2c78c8b 100644
+--- a/gio/glocalfileinfo.c
++++ b/gio/glocalfileinfo.c
+@@ -1096,6 +1096,7 @@ lookup_uid_data (uid_t uid)
+       if (pwbufp->pw_name != NULL && pwbufp->pw_name[0] != 0)
+ 	data->user_name = convert_pwd_string_to_utf8 (pwbufp->pw_name);
+ 
++#ifndef __ANDROID__
+       gecos = pwbufp->pw_gecos;
+ 
+       if (gecos)
+@@ -1105,6 +1106,7 @@ lookup_uid_data (uid_t uid)
+ 	    *comma = 0;
+ 	  data->real_name = convert_pwd_string_to_utf8 (gecos);
+ 	}
++#endif
+     }
+ 
+   /* Default fallbacks */
+diff --git a/glib/gutils.c b/glib/gutils.c
+index d6b9b0e..8896d0a 100644
+--- a/glib/gutils.c
++++ b/glib/gutils.c
+@@ -1759,6 +1759,7 @@ g_get_any_init_do (void)
+       {
+ 	g_user_name = g_strdup (pw->pw_name);
+ 
++#ifndef __ANDROID__
+ 	if (pw->pw_gecos && *pw->pw_gecos != '\0') 
+ 	  {
+ 	    gchar **gecos_fields;
+@@ -1772,6 +1773,7 @@ g_get_any_init_do (void)
+ 	    g_strfreev (gecos_fields);
+ 	    g_strfreev (name_parts);
+ 	  }
++#endif
+ 
+ 	if (!g_home_dir)
+ 	  g_home_dir = g_strdup (pw->pw_dir);
+-- 
+1.7.6
+

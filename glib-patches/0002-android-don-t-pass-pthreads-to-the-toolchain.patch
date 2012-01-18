@@ -1,0 +1,29 @@
+From e4d20fa2c0a99b2656a27c60cd2ddc72d01c0d61 Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@linux.intel.com>
+Date: Mon, 22 Aug 2011 02:43:09 +0100
+Subject: [PATCH 2/7] android: don't pass -pthreads to the toolchain
+
+The android toolchain doesn't recognize the -pthreads argument so we
+skip the check as done for cygwin and darwin already.
+---
+ configure.ac |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 0612fb7..6c5efdc 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1965,8 +1965,8 @@ if test x"$have_threads" != xno; then
+     # One of them does for most gcc versions and some other platforms/compilers
+     # too and could be considered as the canonical way to go. 
+     case $host in
+-      *-*-cygwin*|*-*-darwin*)
+-         # skip cygwin and darwin -pthread or -pthreads test
++      *-*-cygwin*|*-*-darwin*|*android*)
++         # skip cygwin/darwin/android -pthread or -pthreads test
+          ;;
+       *-solaris*)
+         # These compiler/linker flags work with both Sun Studio and gcc
+-- 
+1.7.6
+

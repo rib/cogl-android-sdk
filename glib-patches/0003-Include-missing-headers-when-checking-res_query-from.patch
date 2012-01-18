@@ -1,0 +1,38 @@
+From e984ff75f16876ec15f97483a1570ae22248cc55 Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@linux.intel.com>
+Date: Tue, 30 Aug 2011 00:39:24 +0100
+Subject: [PATCH 3/7] Include missing headers when checking res_query from
+ bind
+
+When we fail to find a libresolv and fallback to checking libbind for
+res_query() we still need to include the following as we do for the
+libresolv checks:
+
+ #include <sys/types.h>
+ #include <netinet/in.h>
+ #include <arpa/nameser.h>
+
+This patch makes sure to pass those include directives to AC_TRY_LINK
+---
+ configure.ac |    5 ++++-
+ 1 files changed, 4 insertions(+), 1 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 6c5efdc..9b78ad7 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1063,7 +1063,10 @@ if test $glib_native_win32 = no; then
+                            [AC_MSG_RESULT([in -lresolv])
+                             LIBASYNCNS_LIBADD="-lresolv"],
+                            [LIBS="-lbind $save_libs"
+-                            AC_TRY_LINK([#include <resolv.h>],
++                            AC_TRY_LINK([#include <sys/types.h>
++#include <netinet/in.h>
++#include <arpa/nameser.h>
++#include <resolv.h>],
+                                         [res_query("test", 0, 0, (void *)0, 0);],
+                                         [AC_MSG_RESULT([in -lbind])
+                                          LIBASYNCNS_LIBADD="-lbind"],
+-- 
+1.7.6
+

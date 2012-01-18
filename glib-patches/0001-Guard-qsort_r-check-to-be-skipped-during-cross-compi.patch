@@ -1,0 +1,99 @@
+From ee41416f731f594ef799469d87699862e93e19c8 Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@linux.intel.com>
+Date: Mon, 22 Aug 2011 00:22:45 +0100
+Subject: [PATCH 1/7] Guard qsort_r check to be skipped during cross-compile
+
+This backports two patches from upstream to ensure that we don't try
+to compile a test program for checking qsort_r when we are
+cross-compiling. The upstream patches were:
+
+28a9e91b136: Fix regression in qsort_r BSD detection
+03441e406c5: configure.ac: Check for qsort_r function before running
+             the test program
+---
+ configure.ac |   72 +++++++++++++++++++++++++++++++--------------------------
+ 1 files changed, 39 insertions(+), 33 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 1fafc76..0612fb7 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -573,39 +573,45 @@ AC_FUNC_VPRINTF
+ AC_FUNC_ALLOCA
+ AC_CHECK_FUNCS(mmap posix_memalign memalign valloc fsync pipe2)
+ AC_CHECK_FUNCS(atexit on_exit timegm gmtime_r)
+-# BSD has a qsort_r with wrong argument order
+-AC_MSG_CHECKING([for qsort_r])
+-AC_RUN_IFELSE([[
+-#define _GNU_SOURCE
+-#include <stdlib.h>
+-
+-static int
+-cmp (const void *a, const void *b, void *c)
+-{
+-  const int *ia = a;
+-  const int *ib = b;
+-
+-  if (*ia < *ib)
+-    return -1;
+-  else if (*ia > *ib)
+-    return 1;
+-  else
+-    return 0;
+-}
++dnl don't use AC_CHECK_FUNCS here, otherwise HAVE_QSORT_R will
++dnl be automatically defined, which we don't want to do
++dnl until we have checked this function is actually usable
++AC_CHECK_FUNC([qsort_r])
++if test x$ac_cv_func_qsort_r = xyes ; then
++  # BSD has a qsort_r with wrong argument order
++  AC_MSG_CHECKING([for qsort_r])
++  AC_RUN_IFELSE([[
++  #define _GNU_SOURCE
++  #include <stdlib.h>
++
++  static int
++  cmp (const void *a, const void *b, void *c)
++  {
++    const int *ia = a;
++    const int *ib = b;
++
++    if (*ia < *ib)
++      return -1;
++    else if (*ia > *ib)
++      return 1;
++    else
++      return 0;
++  }
+ 
+-int
+-main (int argc, char **argv)
+-{
+-  int arr[3] = { 1, 2, 0 };
+-  int d = 3;
++  int
++  main (int argc, char **argv)
++  {
++    int arr[3] = { 1, 2, 0 };
++    int d = 3;
+ 
+-  qsort_r (arr, 3, sizeof (int), cmp, &d);
++    qsort_r (arr, 3, sizeof (int), cmp, &d);
+ 
+-  if (arr[0] == 0 && arr[1] == 1 && arr[2] == 2)
+-    return 0;
+-  else
+-    return 1;
+-}]],[have_qsort_r=yes],[have_qsort_r=no])
++    if (arr[0] == 0 && arr[1] == 1 && arr[2] == 2)
++      return 0;
++    else
++      return 1;
++  }]],[have_qsort_r=yes],[have_qsort_r=no])
++fi
+ 
+ if test $have_qsort_r = yes ; then
+   AC_MSG_RESULT([yes])
+-- 
+1.7.6
+
