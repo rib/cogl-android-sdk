@@ -1,56 +1,62 @@
-Download the android ndk (r6)
+Download and unpack the latest android SDK
+Download and unpack ndk r7
 
-Read docs/STANDALONE-TOOLCHAIN.html "3/ Invoking the compiler (the easy way):"
+Read $ANDROID_NDK_DIR/docs/STANDALONE-TOOLCHAIN.html "3/ Invoking the
+compiler (the easy way):"
 
-Make a standalone toolchain and add it to your PATH
+Make a standalone toolchain
 
-Run build.sh
-XXX: the instructions for building Cogl should be hacked, and instead of using
-the 1.7.6 snapshot Cogl should be cloned from git and checkout commit
-4ea7caf3366f9 and apply cogl-4ea7caf3366f99.patch
+E.g:
+build/tools/make-standalone-toolchain.sh --platform=android-9 --install-dir=$HOME/local/android-toolchain
 
-cd examples/android/hello
+Edit the bashrc file in this directory to point to the locations for
+the Android SDK and NDK.
 
-export PATH=/home/bob/src/android/android-ndk-r7:$PATH
-export NDK_MODULE_PATH=/home/bob/var/platforms/android/packages
+Source the bashrc file into your shell. (Further notes assume they can
+refer to these variables.)
+
+source bashrc
+
+Build the Cogl SDK:
+
+./build.sh
+
+Build the sample application:
+
+(Note: you should change this accordingly if you selected a different
+ modules dir when running ./build.sh)
+
+export NDK_MODULE_PATH=$PWD/modules
+
+cd $NDK_MODULE_PATH/samples/hello
 
 NDK_DEBUG=1 ndk-build
 
-Download the latest SDK
-
-export PATH=/home/bob/src/android/android-sdk-linux_86/tools/:/home/bob/src/android/android-sdk-linux_86/platform-tools:$PATH
-
-cd examples/android/hello
-
 List sdk targets using
+
 android list
 
 Then run
 android update project -p . -t <TARGET_ID>
 
-
 Then build an apk using:
 ant debug
 
-Copy the apk to 
-
 Connect to a device via a usb cable
 
-Install the api:
+Install the apk:
 $ adb install bin/TestCoglHello-debug.apk
 
 Get a shell on the device and run the test:
 adb shell am start -a android.intent.action.MAIN -n com.cogl.example.zzz.Hello/android.app.NativeActivity
 
 ndk-gdb
-NB: you need to switch thread once connected via gdb
+NB: you may need to switch thread once connected via gdb
 
-ndk-build && rm -fr bin && ant debug && adb install -i bin/TestCoglHello-debug.apk
+To rebuild and re-install do something like:
+rm -fr bin libs obj && NDK_DEBUG=1 ndk-build -B && ant debug && adb install -r bin/TestCoglHello-debug.apk
 
-XXX: I was previously trying the following before getting ndk-gdb to work...
-adb forward tcp:12345 tcp:12345
-$ adb shell run-as com.cogl.example.zzz.Hello /data/local/gdbserver :12345 --attach `adb shell ps | grep com.cogl.example.zzz.Hello | awk '{print $2}'`
-
-XXX: As a reminder I needed to hack the package name in AndroidManifest.xml to
-get a favourable listing in /data/system/packages.list in the first 8k of the
-file to workaround a bug in the run-as command.
+It shouldn't be necessary to scrap everything for each re-build but
+I've been finding that the tools don't always notice when things have
+changed and don't rebuild things when you want them too. For now I've
+resorted to scrapping everthing each re-build just to be sure.

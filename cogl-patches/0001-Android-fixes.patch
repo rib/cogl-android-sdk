@@ -1,54 +1,20 @@
-diff --git a/cogl/cogl-context.c b/cogl/cogl-context.c
-index 21c10b7..2505bf7 100644
---- a/cogl/cogl-context.c
-+++ b/cogl/cogl-context.c
-@@ -511,6 +511,7 @@ _cogl_context_free (CoglContext *context)
- 
-   g_byte_array_free (context->buffer_map_fallback_array, TRUE);
- 
-+  g_warning ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX display ref count=%d\n", ((CoglObject *)context->display)->ref_count);
-   cogl_object_unref (context->display);
- 
-   g_free (context);
-diff --git a/cogl/driver/gles/cogl-gles.c b/cogl/driver/gles/cogl-gles.c
-index df90c57..3ca4013 100644
---- a/cogl/driver/gles/cogl-gles.c
-+++ b/cogl/driver/gles/cogl-gles.c
-@@ -41,6 +41,8 @@ _cogl_gles_update_features (CoglContext *context,
-   CoglFeatureFlags flags = 0;
-   const char *gl_extensions;
-   int num_stencil_bits = 0;
-+  void *get_string;
-+  const char *gl_extensions_2;
- 
-   /* We have to special case getting the pointer to the glGetString
-      function because we need to use it to determine what functions we
-@@ -49,16 +51,13 @@ _cogl_gles_update_features (CoglContext *context,
-     (void *) _cogl_renderer_get_proc_address (context->display->renderer,
-                                               "glGetString");
- 
--  COGL_NOTE (WINSYS,
--             "Checking features\n"
--             "  GL_VENDOR: %s\n"
--             "  GL_RENDERER: %s\n"
--             "  GL_VERSION: %s\n"
--             "  GL_EXTENSIONS: %s",
--             context->glGetString (GL_VENDOR),
--             context->glGetString (GL_RENDERER),
--             context->glGetString (GL_VERSION),
--             context->glGetString (GL_EXTENSIONS));
-+  get_string = glGetString;
-+  gl_extensions_2 = glGetString (GL_VENDOR);
-+
-+  g_warning (" GL_VENDOR: %s", context->glGetString (GL_VENDOR));
-+  g_warning (" GL_RENDERER: %s", context->glGetString (GL_RENDERER));
-+  g_warning (" GL_VERSION: %s", context->glGetString (GL_VERSION));
-+  g_warning (" GL_EXTENSIONS: %s", context->glGetString (GL_EXTENSIONS));
- 
-   gl_extensions = (const char*) context->glGetString (GL_EXTENSIONS);
- 
+From a0a59b7ab73099759c2be5172383011051fb777f Mon Sep 17 00:00:00 2001
+From: Robert Bragg <robert@linux.intel.com>
+Date: Thu, 1 Mar 2012 00:28:32 +0000
+Subject: [PATCH] Android fixes
+
+---
+ cogl/winsys/cogl-winsys-egl-android.c      |   16 ++++++
+ cogl/winsys/cogl-winsys-egl-private.h      |    2 +
+ cogl/winsys/cogl-winsys-egl.c              |   67 +++++++++++++++++++++++++
+ examples/android/hello/AndroidManifest.xml |    7 ++-
+ examples/android/hello/build.xml           |   73 ++++++++++++++--------------
+ examples/android/hello/jni/Android.mk      |    6 ++-
+ examples/android/hello/jni/main.c          |   14 ++++--
+ 7 files changed, 141 insertions(+), 44 deletions(-)
+
 diff --git a/cogl/winsys/cogl-winsys-egl-android.c b/cogl/winsys/cogl-winsys-egl-android.c
-index 2efa6b2..0c22deb 100644
+index 2efa6b2..ef0d1cf 100644
 --- a/cogl/winsys/cogl-winsys-egl-android.c
 +++ b/cogl/winsys/cogl-winsys-egl-android.c
 @@ -29,6 +29,7 @@
@@ -59,52 +25,7 @@ index 2efa6b2..0c22deb 100644
  #include <android/native_window.h>
  
  #include "cogl-winsys-egl-android-private.h"
-@@ -62,6 +63,7 @@ _cogl_winsys_renderer_disconnect (CoglRenderer *renderer)
- {
-   CoglRendererEGL *egl_renderer = renderer->winsys;
- 
-+  g_warning ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX eglTerminate\n");
-   eglTerminate (egl_renderer->edpy);
- 
-   g_slice_free (CoglRendererEGL, egl_renderer);
-@@ -78,6 +80,7 @@ _cogl_winsys_renderer_connect (CoglRenderer *renderer,
- 
-   egl_renderer->platform_vtable = &_cogl_winsys_egl_vtable;
- 
-+  g_warning ("XXXXXXXXXXXXXXXXXXXXXX eglGetDisplay()");
-   egl_renderer->edpy = eglGetDisplay (EGL_DEFAULT_DISPLAY);
- 
-   if (!_cogl_winsys_egl_renderer_connect_common (renderer, error))
-@@ -116,6 +119,11 @@ _cogl_winsys_egl_context_created (CoglDisplay *display,
-                       egl_display->egl_config,
-                       EGL_NATIVE_VISUAL_ID, &format);
- 
-+  g_warning ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX config=%d, format=%d, android_native_window = %p\n",
-+             egl_display->egl_config,
-+             format,
-+             android_native_window);
-+
-   ANativeWindow_setBuffersGeometry (android_native_window,
-                                     0,
-                                     0,
-@@ -131,6 +139,8 @@ _cogl_winsys_egl_context_created (CoglDisplay *display,
-       error_message = "Unable to create EGL window surface";
-       goto fail;
-     }
-+  g_warning ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX eglCreateWindowSurface(%p) = %p\n",
-+             egl_renderer->edpy, egl_display->egl_surface);
- 
-   if (!eglMakeCurrent (egl_renderer->edpy,
-                        egl_display->egl_surface,
-@@ -154,6 +164,7 @@ _cogl_winsys_egl_context_created (CoglDisplay *display,
-   return TRUE;
- 
-  fail:
-+  g_warning ("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX %s\n", error_message);
-   g_set_error (error, COGL_WINSYS_ERROR,
-                COGL_WINSYS_ERROR_CREATE_CONTEXT,
-                "%s", error_message);
-@@ -181,6 +192,22 @@ _cogl_winsys_egl_display_destroy (CoglDisplay *display)
+@@ -181,6 +182,20 @@ _cogl_winsys_egl_display_destroy (CoglDisplay *display)
    g_slice_free (CoglDisplayAndroid, egl_display->platform);
  }
  
@@ -117,8 +38,6 @@ index 2efa6b2..0c22deb 100644
 +
 +  if (egl_display->egl_surface != EGL_NO_SURFACE)
 +    {
-+      g_warning ("--------------------------- eglDestroySurface(%p, %p)",
-+                 egl_renderer->edpy, egl_display->egl_surface);
 +      eglDestroySurface (egl_renderer->edpy, egl_display->egl_surface);
 +      egl_display->egl_surface = EGL_NO_SURFACE;
 +    }
@@ -127,7 +46,7 @@ index 2efa6b2..0c22deb 100644
  static gboolean
  _cogl_winsys_egl_onscreen_init (CoglOnscreen *onscreen,
                                  EGLConfig egl_config,
-@@ -217,6 +244,7 @@ _cogl_winsys_egl_vtable =
+@@ -217,6 +232,7 @@ _cogl_winsys_egl_vtable =
    {
      .display_setup = _cogl_winsys_egl_display_setup,
      .display_destroy = _cogl_winsys_egl_display_destroy,
@@ -149,10 +68,10 @@ index 6658278..9714e38 100644
    void *platform;
    /* vtable for platform specific parts */
 diff --git a/cogl/winsys/cogl-winsys-egl.c b/cogl/winsys/cogl-winsys-egl.c
-index ce5d5da..27ac3b0 100644
+index 5d96ac4..9110956 100644
 --- a/cogl/winsys/cogl-winsys-egl.c
 +++ b/cogl/winsys/cogl-winsys-egl.c
-@@ -84,12 +84,77 @@ static const CoglFeatureData winsys_feature_data[] =
+@@ -82,12 +82,77 @@ static const CoglFeatureData winsys_feature_data[] =
  #include "cogl-winsys-egl-feature-functions.h"
    };
  
@@ -230,67 +149,7 @@ index ce5d5da..27ac3b0 100644
    ptr = eglGetProcAddress (name);
  
    /* eglGetProcAddress doesn't support fetching core API so we need to
-@@ -138,6 +203,7 @@ _cogl_winsys_egl_renderer_connect_common (CoglRenderer *renderer,
- {
-   CoglRendererEGL *egl_renderer = renderer->winsys;
- 
-+  g_warning ("XXXXXXXXXXXXXXXXXXXXXX eglInitialize()");
-   if (!eglInitialize (egl_renderer->edpy,
-                       &egl_renderer->egl_version_major,
-                       &egl_renderer->egl_version_minor))
-@@ -177,8 +243,10 @@ egl_attributes_from_framebuffer_config (CoglDisplay *display,
-                                                               config,
-                                                               attributes);
- 
-+#if 1
-   attributes[i++] = EGL_STENCIL_SIZE;
-   attributes[i++] = needs_stencil_override ? 2 : 0;
-+#endif
- 
-   attributes[i++] = EGL_RED_SIZE;
-   attributes[i++] = 1;
-@@ -187,25 +255,32 @@ egl_attributes_from_framebuffer_config (CoglDisplay *display,
-   attributes[i++] = EGL_BLUE_SIZE;
-   attributes[i++] = 1;
- 
-+#if 1
-   attributes[i++] = EGL_ALPHA_SIZE;
-   attributes[i++] = config->swap_chain->has_alpha ? 1 : EGL_DONT_CARE;
-+#endif
- 
-+#if 1
-   attributes[i++] = EGL_DEPTH_SIZE;
-   attributes[i++] = 1;
- 
-   attributes[i++] = EGL_BUFFER_SIZE;
-   attributes[i++] = EGL_DONT_CARE;
-+#endif
- 
-+#if 1
-   attributes[i++] = EGL_RENDERABLE_TYPE;
-   attributes[i++] = (renderer->driver == COGL_DRIVER_GL ?
-                       EGL_OPENGL_BIT :
-                       renderer->driver == COGL_DRIVER_GLES1 ?
-                       EGL_OPENGL_ES_BIT :
-                       EGL_OPENGL_ES2_BIT);
-+#endif
- 
-   attributes[i++] = EGL_SURFACE_TYPE;
-   attributes[i++] = EGL_WINDOW_BIT;
- 
-+#if 1
-   if (config->samples_per_pixel)
-     {
-        attributes[i++] = EGL_SAMPLE_BUFFERS;
-@@ -213,6 +288,7 @@ egl_attributes_from_framebuffer_config (CoglDisplay *display,
-        attributes[i++] = EGL_SAMPLES;
-        attributes[i++] = config->samples_per_pixel;
-     }
-+#endif
- 
-   attributes[i++] = EGL_NONE;
- 
-@@ -518,9 +594,11 @@ _cogl_winsys_onscreen_deinit (CoglOnscreen *onscreen)
+@@ -516,9 +581,11 @@ _cogl_winsys_onscreen_deinit (CoglOnscreen *onscreen)
      return;
    if (egl_onscreen->egl_surface != EGL_NO_SURFACE)
      {
@@ -477,37 +336,53 @@ index 01c811c..cbb0735 100644
 +$(call import-module,glib-android)
  $(call import-module,cogl)
 diff --git a/examples/android/hello/jni/main.c b/examples/android/hello/jni/main.c
-index dacbbab..066fe5d 100644
+index dacbbab..03549cf 100644
 --- a/examples/android/hello/jni/main.c
 +++ b/examples/android/hello/jni/main.c
-@@ -84,6 +84,7 @@ static test_draw_frame_and_swap (TestData *data)
+@@ -34,6 +34,7 @@ typedef struct
+ 
+   CoglContext *context;
+   CoglPrimitive *triangle;
++  CoglPipeline *pipeline;
+   CoglFramebuffer *fb;
+ } TestData;
+ 
+@@ -72,11 +73,12 @@ static int test_init (TestData* data)
+ 
+   cogl_onscreen_show (onscreen);
+ 
+-  cogl_push_framebuffer (data->fb);
+-
+-  data->triangle = cogl_primitive_new_p2c4 (COGL_VERTICES_MODE_TRIANGLES,
++  data->triangle = cogl_primitive_new_p2c4 (data->context,
++                                            COGL_VERTICES_MODE_TRIANGLES,
+                                             3, triangle_vertices);
+ 
++  data->pipeline = cogl_pipeline_new (data->context);
++
+   return 0;
+ }
+ 
+@@ -84,8 +86,9 @@ static test_draw_frame_and_swap (TestData *data)
  {
    if (data->context)
      {
+-      cogl_primitive_draw (data->triangle);
+-      cogl_framebuffer_swap_buffers (data->fb);
 +      cogl_framebuffer_clear4f (data->fb, COGL_BUFFER_BIT_COLOR, 1, 0, 0, 1);
-       cogl_primitive_draw (data->triangle);
-       cogl_framebuffer_swap_buffers (data->fb);
++      cogl_framebuffer_draw_primitive (data->fb, data->pipeline, data->triangle);
++      cogl_onscreen_swap_buffers (COGL_ONSCREEN (data->fb));
      }
-@@ -152,12 +153,22 @@ void
- android_main (struct android_app* application)
- {
-   TestData data;
-+  int debug = 1;
+ }
  
-   /* Make sure glue isn't stripped */
-   app_dummy ();
- 
-   g_android_init ();
- 
-+#if 0
-+  g_warning ("YYYYXXXXXXXXXXXXXXXXXXXXXXXXXX");
-+
-+  while (debug)
-+    ;
-+
-+  g_warning ("YYYYXXXXXXXXXXXXXXXXXXXXXXXXXX");
-+#endif
-+
-   memset (&data, 0, sizeof (TestData));
-   application->userData = &data;
-   application->onAppCmd = test_handle_cmd;
+@@ -95,6 +98,7 @@ test_fini (TestData *data)
+   if (data->fb)
+     {
+       cogl_object_unref (data->triangle);
++      cogl_object_unref (data->pipeline);
+       cogl_object_unref (data->fb);
+       cogl_object_unref (data->context);
+       data->triangle = NULL;
+-- 
+1.7.7.6
+
