@@ -6,3 +6,7 @@ PATH="$PATH:$ANDROID_NDK_DIR:$ANDROID_NDK_TOOLCHAIN/bin"
 PATH="$PATH:$ANDROID_SDK_DIR/tools/:$ANDROID_SDK_DIR/platform-tools"
 
 export NDK_MODULE_PATH=$HOME/path/to/cogl-android-sdk/modules
+
+if test "$#" -ge 1; then
+   exec "$@";
+fi
