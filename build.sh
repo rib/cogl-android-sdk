@@ -214,7 +214,7 @@ if ! test -f $MODULES_DIR/glib/Android.mk; then
     for i in $COGL_ANDROID_SDK_DIR/glib-patches/*.patch; do patch -p1 <$i; done
     autoconf
     #note: PKG_CONFIG_LIBDIR is set to an invalid path so configure.ac doesn't find any system packages
-    PKG_CONFIG_LIBDIR=/foo/bar glib_cv_stack_grows=no glib_cv_uscore=no ac_cv_func_posix_getpwuid_r=no ac_cv_func_posix_getgrgid_r=no CPPFLAGS="-I$MODULES_DIR/libbind/include/bind -I$MODULES_DIR/libiconv/include -I$MODULES_DIR/gettext/include" LDFLAGS="-L$MODULES_DIR/libbind/lib -L$MODULES_DIR/libiconv/lib -L$MODULES_DIR/gettext/lib" ./configure --host=arm-linux-androideabi --disable-shared --with-libiconv=gnu --prefix=$MODULES_DIR/glib
+    GLIB_GENMARSHAL="$COGL_ANDROID_SDK_DIR/glib-genmarshal-wrapper.sh" PKG_CONFIG_LIBDIR=/foo/bar glib_cv_stack_grows=no glib_cv_uscore=no ac_cv_func_posix_getpwuid_r=no ac_cv_func_posix_getgrgid_r=no CPPFLAGS="-I$MODULES_DIR/libbind/include/bind -I$MODULES_DIR/libiconv/include -I$MODULES_DIR/gettext/include" LDFLAGS="-L$MODULES_DIR/libbind/lib -L$MODULES_DIR/libiconv/lib -L$MODULES_DIR/gettext/lib" ./configure --host=arm-linux-androideabi --disable-shared --with-libiconv=gnu --prefix=$MODULES_DIR/glib
     make install
     rm -fr $MODULES_DIR/glib/bin
     rm -fr $MODULES_DIR/glib/share/gtk-doc
