@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -x
+set -ex
 
 # Please read the README before running this script!
 
