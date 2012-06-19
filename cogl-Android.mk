@@ -4,8 +4,8 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_MODULE        := cogl
-LOCAL_SRC_FILES     := lib/libcogl.a
-LOCAL_EXPORT_CFLAGS := -I$(LOCAL_PATH)/include/cogl
+LOCAL_SRC_FILES     := lib/libcogl2.a
+LOCAL_EXPORT_CFLAGS := -I$(LOCAL_PATH)/include/cogl2
 
 include $(PREBUILT_STATIC_LIBRARY)
 
