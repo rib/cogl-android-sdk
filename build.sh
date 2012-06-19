@@ -17,7 +17,7 @@ SOURCE_PACKAGES="\
     http://ftp.gnu.org/gnu/gettext/gettext-0.18.tar.gz \
     ftp://ftp.isc.org/isc/libbind/6.0/libbind-6.0.tar.gz \
     http://ftp.acc.umu.se/pub/GNOME/sources/glib/2.29/glib-2.29.2.tar.bz2 \
-    ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng-1.5.9.tar.xz \
+    ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng-1.5.11.tar.xz \
     http://fossies.org/unix/www/expat-2.0.1.tar.gz \
     http://download.savannah.gnu.org/releases/freetype/freetype-2.4.6.tar.bz2"
 
@@ -222,8 +222,8 @@ if ! test -f $MODULES_DIR/glib/Android.mk; then
 fi
 
 if ! test -f $MODULES_DIR/libpng/Android.mk; then
-    tar -xvf $DOWNLOAD_DIR/libpng-1.5.9.tar.xz
-    pushd libpng-1.5.9 &>/dev/null
+    tar -xvf $DOWNLOAD_DIR/libpng-1.5.11.tar.xz
+    pushd libpng-1.5.11 &>/dev/null
     cp $DOWNLOAD_DIR/config.{sub,guess} .
     ./configure --host=arm-linux-androideabi --prefix=$MODULES_DIR/libpng
     make install
