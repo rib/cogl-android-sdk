@@ -1,31 +1,22 @@
-From a0a59b7ab73099759c2be5172383011051fb777f Mon Sep 17 00:00:00 2001
+From 430466f96ab066a975f3ad01ac284385f69ab021 Mon Sep 17 00:00:00 2001
 From: Robert Bragg <robert@linux.intel.com>
 Date: Thu, 1 Mar 2012 00:28:32 +0000
 Subject: [PATCH] Android fixes
 
 ---
- cogl/winsys/cogl-winsys-egl-android.c      |   16 ++++++
- cogl/winsys/cogl-winsys-egl-private.h      |    2 +
- cogl/winsys/cogl-winsys-egl.c              |   67 +++++++++++++++++++++++++
+ cogl/winsys/cogl-winsys-egl-android.c      |   15 ++++++
+ cogl/winsys/cogl-winsys-egl.c              |    2 +
  examples/android/hello/AndroidManifest.xml |    7 ++-
  examples/android/hello/build.xml           |   73 ++++++++++++++--------------
  examples/android/hello/jni/Android.mk      |    6 ++-
  examples/android/hello/jni/main.c          |   14 ++++--
- 7 files changed, 141 insertions(+), 44 deletions(-)
+ 6 files changed, 73 insertions(+), 44 deletions(-)
 
 diff --git a/cogl/winsys/cogl-winsys-egl-android.c b/cogl/winsys/cogl-winsys-egl-android.c
-index 2efa6b2..ef0d1cf 100644
+index 269d65d..4b711cb 100644
 --- a/cogl/winsys/cogl-winsys-egl-android.c
 +++ b/cogl/winsys/cogl-winsys-egl-android.c
-@@ -29,6 +29,7 @@
- #include "config.h"
- #endif
- 
-+#include <stdint.h>
- #include <android/native_window.h>
- 
- #include "cogl-winsys-egl-android-private.h"
-@@ -181,6 +182,20 @@ _cogl_winsys_egl_display_destroy (CoglDisplay *display)
+@@ -181,6 +181,20 @@ _cogl_winsys_egl_display_destroy (CoglDisplay *display)
    g_slice_free (CoglDisplayAndroid, egl_display->platform);
  }
  
@@ -43,10 +34,10 @@ index 2efa6b2..ef0d1cf 100644
 +    }
 +}
 +
- static gboolean
+ static CoglBool
  _cogl_winsys_egl_onscreen_init (CoglOnscreen *onscreen,
                                  EGLConfig egl_config,
-@@ -217,6 +232,7 @@ _cogl_winsys_egl_vtable =
+@@ -217,6 +231,7 @@ _cogl_winsys_egl_vtable =
    {
      .display_setup = _cogl_winsys_egl_display_setup,
      .display_destroy = _cogl_winsys_egl_display_destroy,
@@ -54,102 +45,11 @@ index 2efa6b2..ef0d1cf 100644
      .context_created = _cogl_winsys_egl_context_created,
      .onscreen_init = _cogl_winsys_egl_onscreen_init,
    };
-diff --git a/cogl/winsys/cogl-winsys-egl-private.h b/cogl/winsys/cogl-winsys-egl-private.h
-index 6658278..9714e38 100644
---- a/cogl/winsys/cogl-winsys-egl-private.h
-+++ b/cogl/winsys/cogl-winsys-egl-private.h
-@@ -88,6 +88,8 @@ typedef struct _CoglRendererEGL
-   EGLint egl_version_major;
-   EGLint egl_version_minor;
- 
-+  GHashTable *core_functions_hash;
-+
-   /* Data specific to the EGL platform */
-   void *platform;
-   /* vtable for platform specific parts */
 diff --git a/cogl/winsys/cogl-winsys-egl.c b/cogl/winsys/cogl-winsys-egl.c
-index 5d96ac4..9110956 100644
+index 800ebce..17ed67b 100644
 --- a/cogl/winsys/cogl-winsys-egl.c
 +++ b/cogl/winsys/cogl-winsys-egl.c
-@@ -82,12 +82,77 @@ static const CoglFeatureData winsys_feature_data[] =
- #include "cogl-winsys-egl-feature-functions.h"
-   };
- 
-+/* Define an array of features */
-+#undef COGL_EXT_BEGIN
-+#define COGL_EXT_BEGIN(name,                                            \
-+                       min_gl_major, min_gl_minor,                      \
-+                       gles_availability,                               \
-+                       namespaces, extension_names)
-+#undef COGL_EXT_FUNCTION
-+#define COGL_EXT_FUNCTION(ret, name, args)  #name,
-+#undef COGL_EXT_END
-+#define COGL_EXT_END()
-+
-+static GHashTable *
-+create_core_functions_table (CoglRenderer *renderer, const char **functions)
-+{
-+  GHashTable *table;
-+  int i;
-+
-+  table = g_hash_table_new (g_str_hash, g_str_equal);
-+  for (i = 0; functions[i]; i++)
-+    {
-+      void *ptr;
-+      g_module_symbol (renderer->libgl_module, functions[i], &ptr);
-+      if (G_UNLIKELY (!ptr))
-+        {
-+          g_warning ("Core driver symbol missing: %s", functions[i]);
-+          continue;
-+        }
-+      g_hash_table_insert (table, (void *)functions[i], ptr);
-+    }
-+  return table;
-+}
-+
- static CoglFuncPtr
- _cogl_winsys_renderer_get_proc_address (CoglRenderer *renderer,
-                                         const char *name)
- {
-+  CoglRendererEGL *egl_renderer = renderer->winsys;
-   void *ptr;
- 
-+  if (renderer->driver == COGL_DRIVER_GLES1 ||
-+      renderer->driver == COGL_DRIVER_GLES2)
-+    {
-+      const char *gles1_functions[] = {
-+#include "gl-prototypes/cogl-gles1-functions.h"
-+        NULL
-+      };
-+      const char *gles2_functions[] = {
-+#include "gl-prototypes/cogl-gles2-functions.h"
-+        NULL
-+      };
-+      const char **functions;
-+
-+      if (!egl_renderer->core_functions_hash)
-+        {
-+          if (renderer->driver == COGL_DRIVER_GLES1)
-+            functions = gles1_functions;
-+          else if (renderer->driver == COGL_DRIVER_GLES2)
-+            functions = gles2_functions;
-+
-+          egl_renderer->core_functions_hash =
-+            create_core_functions_table (renderer, functions);
-+        }
-+
-+      ptr = g_hash_table_lookup (egl_renderer->core_functions_hash, name);
-+      if (ptr)
-+        return ptr;
-+
-+      /* FIXME: for GL we currently just assume that the
-+       * driver will return NULL for core symbols. */
-+    }
-+
-   ptr = eglGetProcAddress (name);
- 
-   /* eglGetProcAddress doesn't support fetching core API so we need to
-@@ -516,9 +581,11 @@ _cogl_winsys_onscreen_deinit (CoglOnscreen *onscreen)
+@@ -630,9 +630,11 @@ _cogl_winsys_onscreen_deinit (CoglOnscreen *onscreen)
      return;
    if (egl_onscreen->egl_surface != EGL_NO_SURFACE)
      {
@@ -384,5 +284,5 @@ index dacbbab..03549cf 100644
        cogl_object_unref (data->context);
        data->triangle = NULL;
 -- 
-1.7.7.6
+1.7.3.16.g9464b
 

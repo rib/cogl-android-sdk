@@ -22,7 +22,7 @@ SOURCE_PACKAGES="\
     http://download.savannah.gnu.org/releases/freetype/freetype-2.4.6.tar.bz2"
 
 GIT_REPOS="\
-    git://git.gnome.org/cogl.git@bbcbece6c976fbf \
+    git://git.gnome.org/cogl.git@099d6d1b505b55bb \
     https://github.com/dlespiau/glib-android.git@29922cd171895"
 
 CONFIG_GUESS_URL="http://git.savannah.gnu.org/gitweb/?p=automake.git;a=blob_plain;f=lib/config.guess"
