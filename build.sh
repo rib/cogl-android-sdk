@@ -19,7 +19,11 @@ SOURCE_PACKAGES="\
     http://ftp.acc.umu.se/pub/GNOME/sources/glib/2.29/glib-2.29.2.tar.bz2 \
     ftp://ftp.simplesystems.org/pub/libpng/png/src/libpng-1.5.11.tar.xz \
     http://fossies.org/unix/www/expat-2.1.0.tar.gz \
-    http://download.savannah.gnu.org/releases/freetype/freetype-2.4.6.tar.bz2"
+    http://download.savannah.gnu.org/releases/freetype/freetype-2.4.6.tar.bz2 \
+    http://www.freedesktop.org/software/fontconfig/release/fontconfig-2.9.91.tar.bz2 \
+    http://cairographics.org/releases/cairo-1.12.2.tar.xz \
+    http://cairographics.org/releases/pixman-0.26.0.tar.gz \
+    http://ftp.acc.umu.se/pub/GNOME/sources/pango/1.29/pango-1.29.4.tar.xz"
 
 GIT_REPOS="\
     git://git.gnome.org/cogl.git@099d6d1b505b55bb \
@@ -139,6 +143,19 @@ function git_clone ()
     popd &>/dev/null
 }
 
+function add_path ()
+{
+    for x in "$@"; do
+        if test -n "$PKG_CONFIG_PATH"; then
+            PKG_CONFIG_PATH="$PKG_CONFIG_PATH:"
+        fi
+        PKG_CONFIG_PATH="$PKG_CONFIG_PATH$MODULES_DIR/$x/lib/pkgconfig"
+
+        CPPFLAGS="$CPPFLAGS -I$MODULES_DIR/$x/include"
+        LDFLAGS="$LDFLAGS -L$MODULES_DIR/$x/lib"
+    done
+}
+
 # Try to guess a download program if none has been specified
 if [ -z "$DOWNLOAD_PROG" ]; then
     # If no download program has been specified then check if wget or
@@ -173,6 +190,13 @@ for repo_value in $GIT_REPOS; do
     git_clone $repo $commit
 done
 
+export PKG_CONFIG_PATH
+# note: PKG_CONFIG_LIBDIR is set to an invalid path so configure.ac
+# doesn't find any system packages
+export PKG_CONFIG_LIBDIR=/foo/bar
+export CPPFLAGS
+export LDFLAGS
+
 cd $BUILD_DIR
 
 if ! test -f $MODULES_DIR/libiconv/Android.mk; then
@@ -187,15 +211,19 @@ if ! test -f $MODULES_DIR/libiconv/Android.mk; then
     popd &>/dev/null
 fi
 
+add_path libiconv
+
 if ! test -f $MODULES_DIR/gettext/Android.mk; then
     tar -xvf $DOWNLOAD_DIR/gettext-0.18.tar.gz
     pushd gettext-0.18 &>/dev/null
     cp $DOWNLOAD_DIR/config.{sub,guess} ./build-aux/
-    gl_cv_header_working_stdint_h=yes CPPFLAGS=-I$MODULES_DIR/libiconv/include LDFLAGS=-L$MODULES_DIR/libiconv/lib ./configure --host=arm-linux-androideabi --without-included-regex --disable-java --disable-openmp --without-libiconv-prefix --without-libintl-prefix --without-libglib-2.0-prefix --without-libcroco-0.6-prefix --with-included-libxml --without-libncurses-prefix --without-libtermcap-prefix --without-libcurses-prefix --without-libexpat-prefix --without-emacs --prefix=$MODULES_DIR/gettext
+    gl_cv_header_working_stdint_h=yes ./configure --host=arm-linux-androideabi --without-included-regex --disable-java --disable-openmp --without-libiconv-prefix --without-libintl-prefix --without-libglib-2.0-prefix --without-libcroco-0.6-prefix --with-included-libxml --without-libncurses-prefix --without-libtermcap-prefix --without-libcurses-prefix --without-libexpat-prefix --without-emacs --prefix=$MODULES_DIR/gettext
     make -C gettext-tools/intl install
     cp $COGL_ANDROID_SDK_DIR/gettext-Android.mk $MODULES_DIR/gettext/Android.mk
     popd &>/dev/null
 fi
+
+add_path gettext
 
 if ! test -d  $MODULES_DIR/libbind; then
     tar -xvf $DOWNLOAD_DIR/libbind-6.0.tar.gz
@@ -207,20 +235,24 @@ if ! test -d  $MODULES_DIR/libbind; then
     popd &>/dev/null
 fi
 
+add_path libbind
+CPPFLAGS="$CPPFLAGS -I$MODULES_DIR/libbind/include/bind"
+
 if ! test -f $MODULES_DIR/glib/Android.mk; then
     tar -xvf $DOWNLOAD_DIR/glib-2.29.2.tar.bz2
     pushd glib-2.29.2 &>/dev/null
     cp $DOWNLOAD_DIR/config.{sub,guess} .
     for i in $COGL_ANDROID_SDK_DIR/glib-patches/*.patch; do patch -p1 <$i; done
     autoconf
-    #note: PKG_CONFIG_LIBDIR is set to an invalid path so configure.ac doesn't find any system packages
-    GLIB_GENMARSHAL="$COGL_ANDROID_SDK_DIR/glib-genmarshal-wrapper.sh" PKG_CONFIG_LIBDIR=/foo/bar glib_cv_stack_grows=no glib_cv_uscore=no ac_cv_func_posix_getpwuid_r=no ac_cv_func_posix_getgrgid_r=no CPPFLAGS="-I$MODULES_DIR/libbind/include/bind -I$MODULES_DIR/libiconv/include -I$MODULES_DIR/gettext/include" LDFLAGS="-L$MODULES_DIR/libbind/lib -L$MODULES_DIR/libiconv/lib -L$MODULES_DIR/gettext/lib" ./configure --host=arm-linux-androideabi --disable-shared --with-libiconv=gnu --prefix=$MODULES_DIR/glib
+    GLIB_GENMARSHAL="$COGL_ANDROID_SDK_DIR/glib-genmarshal-wrapper.sh" glib_cv_stack_grows=no glib_cv_uscore=no ac_cv_func_posix_getpwuid_r=no ac_cv_func_posix_getgrgid_r=no ./configure --host=arm-linux-androideabi --disable-shared --with-libiconv=gnu --prefix=$MODULES_DIR/glib
     make install
     rm -fr $MODULES_DIR/glib/bin
     rm -fr $MODULES_DIR/glib/share/gtk-doc
     cp $COGL_ANDROID_SDK_DIR/glib-Android.mk $MODULES_DIR/glib/Android.mk
     popd &>/dev/null
 fi
+
+add_path glib
 
 if ! test -f $MODULES_DIR/libpng/Android.mk; then
     tar -xvf $DOWNLOAD_DIR/libpng-1.5.11.tar.xz
@@ -232,6 +264,8 @@ if ! test -f $MODULES_DIR/libpng/Android.mk; then
     popd &>/dev/null
 fi
 
+add_path libpng
+
 if ! test -f $MODULES_DIR/expat/Android.mk; then
     tar -xvf $DOWNLOAD_DIR/expat-2.1.0.tar.gz
     pushd expat-2.1.0 &>/dev/null
@@ -241,6 +275,8 @@ if ! test -f $MODULES_DIR/expat/Android.mk; then
     cp $COGL_ANDROID_SDK_DIR/expat-Android.mk $MODULES_DIR/expat/Android.mk
     popd &>/dev/null
 fi
+
+add_path expat
 
 if ! test -f $MODULES_DIR/freetype/Android.mk; then
     tar -xvf $DOWNLOAD_DIR/freetype-2.4.6.tar.bz2
@@ -252,25 +288,100 @@ if ! test -f $MODULES_DIR/freetype/Android.mk; then
     popd &>/dev/null
 fi
 
+add_path freetype
+
+if ! test -f $MODULES_DIR/fontconfig/Android.mk; then
+    tar -xvf $DOWNLOAD_DIR/fontconfig-2.9.91.tar.bz2
+    pushd fontconfig-2.9.91 &>/dev/null
+    cp $DOWNLOAD_DIR/config.{sub,guess} .
+    for i in $COGL_ANDROID_SDK_DIR/fontconfig-patches/*.patch; do
+        patch -p1 <$i;
+    done
+    ./configure --host=arm-linux-androideabi --prefix=$MODULES_DIR/fontconfig \
+        --disable-docs --with-default-fonts=/system/fonts
+    make install
+    cp $COGL_ANDROID_SDK_DIR/fontconfig-Android.mk $MODULES_DIR/fontconfig/Android.mk
+    popd &>/dev/null
+fi
+
+add_path fontconfig
+
 if ! test -f $MODULES_DIR/glib-android/Android.mk; then
     pushd glib-android &>/dev/null
     autoreconf -i -v
     cp $DOWNLOAD_DIR/config.{sub,guess} ./build/autotools
-    PKG_CONFIG_PATH=$MODULES_DIR/glib/lib/pkgconfig ./configure --disable-shared --host=arm-linux-androideabi --prefix=$MODULES_DIR/glib-android
+    ./configure --disable-shared --host=arm-linux-androideabi --prefix=$MODULES_DIR/glib-android
     make install
     cp $COGL_ANDROID_SDK_DIR/glib-android-Android.mk $MODULES_DIR/glib-android/Android.mk
     popd &>/dev/null
 fi
 
+add_path glib-android
+
+if ! test -f $MODULES_DIR/pixman/Android.mk; then
+    tar -xvf $DOWNLOAD_DIR/pixman-0.26.0.tar.gz
+    pushd pixman-0.26.0 &>/dev/null
+    cp $DOWNLOAD_DIR/config.{sub,guess} .
+    for i in $COGL_ANDROID_SDK_DIR/pixman-patches/*.patch; do
+        patch -p1 <$i;
+    done
+    CPPFLAGS="$CPPFLAGS -I$ANDROID_NDK_DIR/sources/android/cpufeatures" \
+    ./configure --host=arm-linux-androideabi --prefix=$MODULES_DIR/pixman
+    make install
+    cp $COGL_ANDROID_SDK_DIR/pixman-Android.mk $MODULES_DIR/pixman/Android.mk
+    popd &>/dev/null
+fi
+
+add_path pixman
+
+if ! test -f $MODULES_DIR/cairo/Android.mk; then
+    tar -xvf $DOWNLOAD_DIR/cairo-1.12.2.tar.xz
+    pushd cairo-1.12.2 &>/dev/null
+    cp $DOWNLOAD_DIR/config.{sub,guess} build/
+    for i in $COGL_ANDROID_SDK_DIR/cairo-patches/*.patch; do
+        patch -p1 <$i;
+    done
+    ./configure --host=arm-linux-androideabi --prefix=$MODULES_DIR/cairo \
+        --disable-pdf --disable-ps --disable-script --disable-svg \
+        --enable-gobject --disable-xlib --disable-xlib-xrender \
+        --disable-xcb --disable-xlib-xcb --disable-xcb-shm
+    make install
+    cp $COGL_ANDROID_SDK_DIR/cairo-Android.mk $MODULES_DIR/cairo/Android.mk
+    popd &>/dev/null
+fi
+
+add_path cairo
+
+if ! test -f $MODULES_DIR/pango/Android.mk; then
+    tar -xvf $DOWNLOAD_DIR/pango-1.29.4.tar.xz
+    pushd pango-1.29.4 &>/dev/null
+    cp $DOWNLOAD_DIR/config.{sub,guess} .
+    # Pango seems to have a misguided configure.in which checks for a
+    # C++ compiler without the host triplet so it ends up picking up
+    # the wrong compiler. To workaround this we'll explicitly tell it
+    # which compiler to use.
+    CXX=arm-linux-androideabi-c++ \
+    ./configure --disable-shared --host=arm-linux-androideabi \
+        --prefix=$MODULES_DIR/pango \
+        --with-included-modules=yes --with-dynamic-modules=no --without-x
+    make install
+    cp $COGL_ANDROID_SDK_DIR/pango-Android.mk $MODULES_DIR/pango/Android.mk
+    popd &>/dev/null
+fi
+
+add_path pango
+
 if ! test -f $MODULES_DIR/cogl/Android.mk; then
     pushd cogl &>/dev/null
     NOCONFIGURE=1 ./autogen.sh
     cp $DOWNLOAD_DIR/config.{sub,guess} ./build
-    CPPFLAGS="-I$MODULES_DIR/gettext/include" LDFLAGS="-L$MODULES_DIR/gettext/lib" PKG_CONFIG_LIBDIR=/foo/bar PKG_CONFIG_PATH=$MODULES_DIR/glib/lib/pkgconfig ./configure  --disable-shared --host=arm-linux-androideabi --prefix=$MODULES_DIR/cogl --disable-gles1 --enable-gles2 --enable-android-egl-platform=yes --disable-gl --enable-debug --disable-cairo --disable-cogl-pango
+    ./configure  --disable-shared --host=arm-linux-androideabi --prefix=$MODULES_DIR/cogl --disable-gles1 --enable-gles2 --enable-android-egl-platform=yes --disable-gl --enable-debug --disable-cairo
     make -i install
     cp $COGL_ANDROID_SDK_DIR/cogl-Android.mk $MODULES_DIR/cogl/Android.mk
     popd &>/dev/null
 fi
+
+add_path cogl
 
 if ! test -d $MODULES_DIR/samples; then
     cp -av $BUILD_DIR/cogl/examples/android $MODULES_DIR/samples

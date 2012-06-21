@@ -1,0 +1,37 @@
+From f01ef49a23348163cdbd5bf23bdfc824cbf57889 Mon Sep 17 00:00:00 2001
+From: Neil Roberts <neil@linux.intel.com>
+Date: Thu, 21 Jun 2012 12:42:24 +0100
+Subject: [PATCH] Android fixes
+
+---
+ pixman/pixman-cpu.c   | 1 +
+ pixman/pixman-utils.c | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/pixman/pixman-cpu.c b/pixman/pixman-cpu.c
+index aa9036f..dcd14fa 100644
+--- a/pixman/pixman-cpu.c
++++ b/pixman/pixman-cpu.c
+@@ -302,6 +302,7 @@ static pixman_bool_t arm_tests_initialized = FALSE;
+ #if defined(__ANDROID__) || defined(ANDROID) /* Android device support */
+ 
+ #include <cpu-features.h>
++#include <cpu-features.c>
+ 
+ static void
+ pixman_arm_read_auxv_or_cpu_features ()
+diff --git a/pixman/pixman-utils.c b/pixman/pixman-utils.c
+index 93c061a..83c011d 100644
+--- a/pixman/pixman-utils.c
++++ b/pixman/pixman-utils.c
+@@ -27,6 +27,7 @@
+ #endif
+ #include <stdio.h>
+ #include <stdlib.h>
++#include <limits.h>
+ 
+ #include "pixman-private.h"
+ 
+-- 
+1.7.11.3.g3c3efa5
+
