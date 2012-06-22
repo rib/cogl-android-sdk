@@ -5,6 +5,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := glib
 LOCAL_SRC_FILES := lib/libglib-2.0.a
+LOCAL_STATIC_LIBRARIES := intl
 
 LOCAL_EXPORT_CFLAGS := 				\
 	-I$(LOCAL_PATH)/include/glib-2.0	\
@@ -18,10 +19,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := gobject
 LOCAL_SRC_FILES := lib/libgobject-2.0.a
-
-LOCAL_EXPORT_CFLAGS := 				\
-	-I$(LOCAL_PATH)/include/glib-2.0	\
-	$(NULL)
+LOCAL_STATIC_LIBRARIES := glib
 
 include $(PREBUILT_STATIC_LIBRARY)
 
@@ -30,10 +28,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := gmodule
 LOCAL_SRC_FILES := lib/libgmodule-2.0.a
-
-LOCAL_EXPORT_CFLAGS := 				\
-	-I$(LOCAL_PATH)/include/glib-2.0	\
-	$(NULL)
+LOCAL_STATIC_LIBRARIES := glib
 
 include $(PREBUILT_STATIC_LIBRARY)
 
@@ -42,10 +37,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE    := gthread
 LOCAL_SRC_FILES := lib/libgthread-2.0.a
-
-LOCAL_EXPORT_CFLAGS := 				\
-	-I$(LOCAL_PATH)/include/glib-2.0	\
-	$(NULL)
+LOCAL_STATIC_LIBRARIES := glib
 
 include $(PREBUILT_STATIC_LIBRARY)
 
@@ -54,6 +46,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := gio
 LOCAL_SRC_FILES := lib/libgio-2.0.a
-LOCAL_EXPORT_CFLAGS := -I$(LOCAL_PATH)/include/glib-2.0
+LOCAL_STATIC_LIBRARIES := glib
 
 include $(PREBUILT_STATIC_LIBRARY)
+
+$(call import-module,gettext)
