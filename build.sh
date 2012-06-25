@@ -26,8 +26,9 @@ SOURCE_PACKAGES="\
     http://ftp.acc.umu.se/pub/GNOME/sources/pango/1.29/pango-1.29.4.tar.xz"
 
 GIT_REPOS="\
-    git://git.gnome.org/cogl.git@099d6d1b505b55bb \
-    https://github.com/dlespiau/glib-android.git@29922cd171895"
+    git://git.gnome.org/cogl.git#099d6d1b505b55bb \
+    https://github.com/dlespiau/glib-android.git#29922cd171895 \
+    git@github.com:otcshare/rig.git#fba9ee2dbee3017c76c5"
 
 CONFIG_GUESS_URL="http://git.savannah.gnu.org/gitweb/?p=automake.git;a=blob_plain;f=lib/config.guess"
 CONFIG_SUB_URL="http://git.savannah.gnu.org/gitweb/?p=automake.git;a=blob_plain;f=lib/config.sub"
@@ -185,8 +186,8 @@ download_file "$CONFIG_GUESS_URL" "config.guess";
 download_file "$CONFIG_SUB_URL" "config.sub";
 
 for repo_value in $GIT_REPOS; do
-    repo=${repo_value%*@[a-z0-9]*}
-    commit=${repo_value##*@}
+    repo=${repo_value%*#[a-z0-9]*}
+    commit=${repo_value##*#}
     git_clone $repo $commit
 done
 
@@ -383,6 +384,21 @@ fi
 
 add_path cogl
 
+if ! test -f $MODULES_DIR/rig/Android.mk; then
+    pushd rig &>/dev/null
+    NOCONFIGURE=1 ./autogen.sh
+    cp $DOWNLOAD_DIR/config.{sub,guess} ./build
+    ./configure --disable-shared --host=arm-linux-androideabi \
+        --prefix=$MODULES_DIR/rig 
+    make install
+    cp $COGL_ANDROID_SDK_DIR/rig-Android.mk $MODULES_DIR/rig/Android.mk
+    popd &>/dev/null
+fi
+
+add_path rig
+
 if ! test -d $MODULES_DIR/samples; then
-    cp -av $BUILD_DIR/cogl/examples/android $MODULES_DIR/samples
+    mkdir -p $MODULES_DIR/samples
+    cp -av $BUILD_DIR/cogl/examples/android/hello $MODULES_DIR/samples/
+    cp -av $BUILD_DIR/rig/editor $MODULES_DIR/samples/
 fi

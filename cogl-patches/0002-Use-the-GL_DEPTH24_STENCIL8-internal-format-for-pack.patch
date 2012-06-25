@@ -1,0 +1,80 @@
+From 31c70151a17ddfe2c2538334ba986995f1a617bf Mon Sep 17 00:00:00 2001
+From: Damien Lespiau <damien.lespiau@intel.com>
+Date: Fri, 25 May 2012 14:55:36 +0100
+Subject: [PATCH 1/2] Use the GL_DEPTH24_STENCIL8 internal format for packed
+ buffers
+
+GL_DEPTH_STENCIL is not a valid internal format according to
+EXT_packed_depth_stencil. Let's use the the GL_DEPTH24_STENCIL8 internal
+format defined by the extension (internal format also used by the OES
+code path).
+
+I've noticed this when trying to create a texture with this format as
+internal format and it did not pass the GL_PROXY_TEXTURE_2D test.
+glRenderBufferStorage() uses internal formats as well, so changing it to
+GL_DEPTH24_STENCIL8 seemed like the natural thing to do.
+---
+ cogl/cogl-framebuffer-private.h |  7 +++----
+ cogl/cogl-framebuffer.c         | 12 ++++--------
+ 2 files changed, 7 insertions(+), 12 deletions(-)
+
+diff --git a/cogl/cogl-framebuffer-private.h b/cogl/cogl-framebuffer-private.h
+index 9922a1a..ccc9c22 100644
+--- a/cogl/cogl-framebuffer-private.h
++++ b/cogl/cogl-framebuffer-private.h
+@@ -167,10 +167,9 @@ struct _CoglFramebuffer
+ };
+ 
+ typedef enum {
+-  COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH_STENCIL    = 1L<<0,
+-  COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8 = 1L<<1,
+-  COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH            = 1L<<2,
+-  COGL_OFFSCREEN_ALLOCATE_FLAG_STENCIL          = 1L<<3
++  COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8 = 1L<<0,
++  COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH            = 1L<<1,
++  COGL_OFFSCREEN_ALLOCATE_FLAG_STENCIL          = 1L<<2
+ } CoglOffscreenAllocateFlags;
+ 
+ typedef struct _CoglGLFramebuffer
+diff --git a/cogl/cogl-framebuffer.c b/cogl/cogl-framebuffer.c
+index ec4acf6..13b3e24 100644
+--- a/cogl/cogl-framebuffer.c
++++ b/cogl/cogl-framebuffer.c
+@@ -830,22 +830,18 @@ try_creating_renderbuffers (CoglContext *ctx,
+   GList *renderbuffers = NULL;
+   GLuint gl_depth_stencil_handle;
+ 
+-  if (flags & (COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH_STENCIL |
+-               COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8))
++  if (flags & COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8)
+     {
+-      GLenum format = ((flags & COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH_STENCIL) ?
+-                       GL_DEPTH_STENCIL : GL_DEPTH24_STENCIL8);
+-
+       /* Create a renderbuffer for depth and stenciling */
+       GE (ctx, glGenRenderbuffers (1, &gl_depth_stencil_handle));
+       GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, gl_depth_stencil_handle));
+       if (n_samples)
+         GE (ctx, glRenderbufferStorageMultisampleIMG (GL_RENDERBUFFER,
+                                                       n_samples,
+-                                                      format,
++                                                      GL_DEPTH24_STENCIL8,
+                                                       width, height));
+       else
+-        GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, format,
++        GE (ctx, glRenderbufferStorage (GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
+                                         width, height));
+       GE (ctx, glBindRenderbuffer (GL_RENDERBUFFER, 0));
+       GE (ctx, glFramebufferRenderbuffer (GL_FRAMEBUFFER,
+@@ -1079,7 +1075,7 @@ _cogl_offscreen_allocate (CoglOffscreen *offscreen,
+                          offscreen->texture_level_width,
+                          offscreen->texture_level_height,
+                          &fb->config,
+-                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH_STENCIL,
++                         flags = COGL_OFFSCREEN_ALLOCATE_FLAG_DEPTH24_STENCIL8,
+                          gl_framebuffer)) ||
+ 
+       ((ctx->private_feature_flags &
+-- 
+1.7.11.3.g3c3efa5
+
